@@ -1,0 +1,18 @@
+Instructions
+
+To compare MIT database results to pan_tompkin results, run get_and_compare(input file path, file ending). Note that the file ending can only be 'fqrs' or 'qrs'. 
+
+ex: 
+get_and_compare('twadb/twa03', qrs)
+
+This will run the pan-tompkins algorithm on the data in this file, and plot the signal with markers for the beats found by the pan-tompkins algorithm, as well as markers for the beats given in the database. 
+
+
+To run the pan-tompkins algorithm, run pan_tompkin[sig, fs, grc].
+
+Sig is a vector of the raw or filter ecg data from a recorded. fs is the sampling frequency of the data (in Hz). grc determines whether the results will be plotted. If 0, the results will not be plotted, if 1, the results will be plotted. 
+
+This returns a vector of amplitudes of R-waves, a vector of beat indices, a numerical value for the delay, and the heart rate in bpm of the input signal.
+
+ex: 
+[qrs_amp_raw, qrs_i_raw, delay, bpm] = pan_tompkin(sig, 200, 1)
