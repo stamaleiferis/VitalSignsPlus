@@ -1,17 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include "coeffs.h"
 
 using namespace std;
 
+int cur_length = 0;
 
 void filter1(double *coeffs_B, double *coeffs_A, double *input, double *output, int length, int filterLength)
 {
     double bcc, acc;
     double *inputp;
     int n,k;
-
-
     for (int ii=0; ii<filterLength; ii++)
     {
         output[ii] = 0;
@@ -36,16 +36,31 @@ void filter1(double *coeffs_B, double *coeffs_A, double *input, double *output, 
         output[n] = bcc-acc;
 
     }
-    FILE *fp = fopen("t.txt", "w");
-    char buff[1024];
-    for(int i = 0; i < n; i++)
-    {
-          sprintf(buff, "%f\n", output[i]);
-          fputs(buff, fp);
-    }
-    fclose(fp);
-}
 
+}
+void conv(double *A, double *B, double *out, int lenA, int lenB)
+{
+	int nconv;
+	int i, j, i1;
+	float tmp;
+	//allocated convolution array
+	nconv = lenA+lenB-1;
+	//convolution process
+  int count = 0;
+	for (i=0; i<nconv; i++)
+	{
+		i1 = i;
+		tmp = 0.0;
+		for (j=0; j<lenB; j++)
+		{
+			if(i1>=0 && i1<lenA)
+				tmp = tmp + (A[i1]*B[j]);
+			i1 = i1-1;
+		}
+    out[count++] = tmp;
+	}
+
+}
 int main(int argc, char* argv[])
 {
     if (argc != 2) perror("Incorrect num args");
@@ -67,13 +82,36 @@ int main(int argc, char* argv[])
       sig[count++] = strtod(buff, NULL);
     }
     fclose(fp);
-    double out[i];
-    double b[3] = {0.97697628, 0.60380455, 0.97697628};
-    double a[3] = {0.60380455, 0.95395256};
-    int length = i;
-    int filter_length = 3;
 
-    filter1(b, a, sig, out, length, filter_length);
+
+    int length = i;
+    double out[length];
+    double out_60[length];
+    double out_80[length];
+    int filter_length = 3;
+    cur_length = length;
+    filter1(NOTCH_60_B, NOTCH_60_A, sig, out, length, filter_length);
+    filter1(NOTCH_60_B, NOTCH_60_A, out, out_60, length, filter_length);
+    filter1(NOTCH_80_B, NOTCH_80_A, out_60, out_80, length, filter_length);
+
+
+
+    double fir[i+128-1];
+    double fir2[i+128-1];
+    conv(out_80, TAPS_KAISER10, fir, i, 128);
+    conv(fir, TAPS_KAISER16,fir2, i, 128);
+    fp = fopen("t.txt", "w");
+   for(int j = 0; j < length; j++)
+   {
+     char buff[32];
+     sprintf(buff, "%f\n", fir2[j]);
+     fputs(buff, fp);
+   }
+   fclose(fp);
+
+
+
+
 
 
 }
