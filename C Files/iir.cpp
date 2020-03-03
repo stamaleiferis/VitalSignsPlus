@@ -7,7 +7,7 @@ using namespace std;
 
 int cur_length = 0;
 
-void filter1(double *coeffs_B, double *coeffs_A, double *input, double *output, int length, int filterLength)
+void filter_helper(double *coeffs_B, double *coeffs_A, double *input, double *output, int length, int filterLength)
 {
     double bcc, acc;
     double *inputp;
@@ -18,7 +18,7 @@ void filter1(double *coeffs_B, double *coeffs_A, double *input, double *output, 
     }
     output[0] = coeffs_B[0] * input[0];
     output[1] = (coeffs_B[0] * input[1] + coeffs_B[1] * input[0]) - coeffs_A[1] * output[0];
-
+    bool flipped = false;
     for (n = 2; n < length; n++) {
 
         acc = 0;
@@ -37,6 +37,12 @@ void filter1(double *coeffs_B, double *coeffs_A, double *input, double *output, 
 
     }
 
+
+}
+void filter1(double *coeffs_B, double *coeffs_A, double *input, double *output, int length, int filterLength)
+{
+  filter_helper(coeffs_B, coeffs_A, input, output, length, filterLength);
+ 
 }
 void conv(double *A, double *B, double *out, int lenA, int lenB)
 {
@@ -61,6 +67,21 @@ void conv(double *A, double *B, double *out, int lenA, int lenB)
 	}
 
 }
+
+
+int max_index(double *arr, int arr_length)
+{
+  int max = 0;
+  for(int i = 0; i < arr_length; i++)
+  {
+    if(arr[i] > arr[max])
+    {
+      max = i;
+    }
+  }
+  return max;
+}
+
 int main(int argc, char* argv[])
 {
     if (argc != 2) perror("Incorrect num args");
@@ -94,24 +115,34 @@ int main(int argc, char* argv[])
     filter1(NOTCH_60_B, NOTCH_60_A, out, out_60, length, filter_length);
     filter1(NOTCH_80_B, NOTCH_80_A, out_60, out_80, length, filter_length);
 
-
-
     double fir[i+128-1];
     double fir2[i+128-1];
     conv(out_80, TAPS_KAISER10, fir, i, 128);
     conv(fir, TAPS_KAISER16,fir2, i, 128);
-    fp = fopen("t.txt", "w");
-   for(int j = 0; j < length; j++)
+
+    double der_h[5] = {-0.125, -0.25, 0, 0.25, 0.125};
+    double derecg[length+4];
+    conv(fir2, der_h, derecg, length, 5);
+    int max = max_index(derecg, length+4);
+    double sqECG[length+4];
+    for(int j = 0; j < length+4; j++)
+    {
+      sqECG[j] = derecg[j] / derecg[max];
+      sqECG[j] *= sqECG[j];
+    }
+
+    double h[10] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
+    double movECG[length+13];
+    conv(sqECG, h, movECG, length+4, 10);
+
+
+   fp = fopen("t.txt", "w");
+   for(int j = 0; j < length+13; j++)
    {
      char buff[32];
-     sprintf(buff, "%f\n", fir2[j]);
+     sprintf(buff, "%f\n", out_80[j]);
      fputs(buff, fp);
    }
    fclose(fp);
-
-
-
-
-
 
 }
