@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <math.h>
 #include "coeffs.h"
 
 using namespace std;
@@ -42,7 +43,7 @@ void filter_helper(double *coeffs_B, double *coeffs_A, double *input, double *ou
 void filter1(double *coeffs_B, double *coeffs_A, double *input, double *output, int length, int filterLength)
 {
   filter_helper(coeffs_B, coeffs_A, input, output, length, filterLength);
- 
+
 }
 void conv(double *A, double *B, double *out, int lenA, int lenB)
 {
@@ -69,7 +70,7 @@ void conv(double *A, double *B, double *out, int lenA, int lenB)
 }
 
 
-int max_index(double *arr, int arr_length)
+float max_index(double *arr, int arr_length)
 {
   int max = 0;
   for(int i = 0; i < arr_length; i++)
@@ -79,7 +80,7 @@ int max_index(double *arr, int arr_length)
       max = i;
     }
   }
-  return max;
+  return arr[max];
 }
 
 int main(int argc, char* argv[])
@@ -123,24 +124,25 @@ int main(int argc, char* argv[])
     double der_h[5] = {-0.125, -0.25, 0, 0.25, 0.125};
     double derecg[length+4];
     conv(fir2, der_h, derecg, length, 5);
-    int max = max_index(derecg, length+4);
+    float max = max_index(derecg, length+4);
+    printf("%f\n", max);
     double sqECG[length+4];
     for(int j = 0; j < length+4; j++)
     {
-      sqECG[j] = derecg[j] / derecg[max];
-      sqECG[j] *= sqECG[j];
+      sqECG[j] = derecg[j] / max;
+      sqECG[j] = pow(sqECG[j], 2.0);
     }
 
     double h[10] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
     double movECG[length+13];
-    conv(sqECG, h, movECG, length+4, 10);
+    conv(sqECG, h, movECG, length, 10);
 
 
    fp = fopen("t.txt", "w");
    for(int j = 0; j < length+13; j++)
    {
      char buff[32];
-     sprintf(buff, "%f\n", out_80[j]);
+     sprintf(buff, "%f\n", movECG[j]);
      fputs(buff, fp);
    }
    fclose(fp);
