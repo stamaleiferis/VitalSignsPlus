@@ -1,0 +1,8 @@
+Compile:
+
+c++ -std=c++11 -O2 iir.cpp
+
+Parameters: 
+input signal
+
+At the end of main HR is a vector of instantaneous heart rates. Use as you wish. 
