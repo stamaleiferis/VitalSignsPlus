@@ -6,6 +6,7 @@
 #include "coeffs_EZ.h"
 
 using namespace std;
+#define BUFF_SIZE 136
 
 extern float rawECG[BUFF_SIZE];
 extern float notchECG[BUFF_SIZE];
@@ -15,9 +16,9 @@ extern float derECG[BUFF_SIZE];
 extern float sqECG[BUFF_SIZE];
 extern float movECG[BUFF_SIZE];
 
-void filter_helper(double *coeffs_B, double *coeffs_A, double *input, double *output, int length, int filterLength)
+void filter_helper(float *coeffs_B, float *coeffs_A, float *input, float *output, int length, int filterLength)
 {
-    double bcc, acc;
+    float bcc, acc;
     double *inputp;
     int n,k;
     for (int ii=0; ii<filterLength; ii++)
@@ -51,8 +52,8 @@ void filter_helper(double *coeffs_B, double *coeffs_A, double *input, double *ou
 void notchFilters()
 {
 
-  double notchECG_1[BUFF_SIZE];
-  double notchECG_2[BUFF_SIZE];
+  float notchECG_1[BUFF_SIZE];
+  float notchECG_2[BUFF_SIZE];
   //apply 60Hz Notch Filter
   filter_helper(NOTCH_60_B, NOTCH_60_A, rawECG, notchECG_1, BUFF_SIZE, 3);
 
@@ -64,7 +65,7 @@ void notchFilters()
 
 }
 
-void conv(double *A, double *B, double *out, int lenA, int lenB)
+void conv(float *A, float *B, float *out, int lenA, int lenB)
 {
 	int nconv;
 	int i, j, i1;
@@ -90,18 +91,18 @@ void conv(double *A, double *B, double *out, int lenA, int lenB)
 
 void kaiserFilters()
 {
-  double fir1[BUFF_SIZE];
+  float fir1[BUFF_SIZE];
   conv(notchECG, TAPS_KAISER10, fir1, BUFF_SIZE, 128);
   conv(fir1, TAPS_KAISER16, filtECG, BUFF_SIZE, 128);
 }
 
 void derivativeFilters()
 {
-  double der_h[5] = {-0.125, -0.25, 0, 0.25, 0.125};
+  float der_h[5] = {-0.125, -0.25, 0, 0.25, 0.125};
   conv(filtECG, der_h, derECG, BUFF_SIZE, 5);
 }
 
-float max(double *arr, int arr_length)
+float max_num(float *arr, int arr_length)
 {
   int max = 0;
   for(int i = 0; i < arr_length; i++)
@@ -116,7 +117,7 @@ float max(double *arr, int arr_length)
 
 void squaring()
 {
-  float max = max(derECG, BUFF_SIZE);
+  float max = max_num(derECG, BUFF_SIZE);
   for(int j = 0; j < BUFF_SIZE; j++)
   {
     sqECG[j] = derECG[j] / max;
@@ -127,11 +128,11 @@ void squaring()
 
 void movFilter()
 {
-  double h[10] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
+  float h[10] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
   conv(sqECG, h, movECG, BUFF_SIZE, 10);
 }
 
-int filtIter()
+void filtIter()
 {
     /*60 Hz, 60 Hz, 80 Hz notch filtering
       output stored in notchECG*/
