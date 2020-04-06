@@ -8,17 +8,26 @@
 using namespace std;
 
 #define BUFF_SIZE 136
-extern float rawECG[BUFF_SIZE];
+/*extern float rawECG[BUFF_SIZE];
 extern float notchECG[BUFF_SIZE];
 extern float filtECG[BUFF_SIZE];
 extern float derECG[BUFF_SIZE];
 extern float sqECG[BUFF_SIZE];
 extern float movECG[BUFF_SIZE];
-extern float lfiltECG[BUFF_SIZE];
+extern float lfiltECG[BUFF_SIZE];*/
+
+extern float signal[BUFF_SIZE]; //store signal segment to be filtered
+extern float bp_signal[BUFF_SIZE];
+extern float derivative[BUFF_SIZE];
+extern float squared[BUFF_SIZE];
+extern float integral[BUFF_SIZE];
+extern bool outputSignal[BUFF_SIZE];
 extern float r_peaks[BUFF_SIZE];
 
 /*Final heart rate stored here*/
 extern float HR[BUFF_SIZE];
+
+extern long unsigned int current;
 
 
 
@@ -136,7 +145,7 @@ void diffFunc(float *in)
 
 void ez_detector_iter(double *sig, int sig_length, int fs)
 {
-  double f1 = 48/fs;
+  /*double f1 = 48/fs;
   double f2 = 52/fs;
   lfilter();
 
@@ -166,7 +175,7 @@ void ez_detector_iter(double *sig, int sig_length, int fs)
   for(int i = 0; i < stop; i++)
   {
     low_pass[i] = 0;
-  }
+  }*/
 
 
   double m200 = 0.2*fs;
@@ -179,10 +188,19 @@ void ez_detector_iter(double *sig, int sig_length, int fs)
   double neg_thresh = 0.01*fs;
   int neg_threshold = (double)neg_thresh;
 
+  //adaptive steep slope threshold
   double M = 0;
+  
+  //A buffer with 5 steep slope threshold values
+  vector<double> MM;
+  
+  //M5 (an element of MM) is recaclculated periodically based on the sampling frequency
   double newM5 = 0;
+  
+  //
   vector<double> M_list;
   vector<double> neg_m;
+  
   vector<double> MM;
   //need m_slope
 
@@ -194,12 +212,11 @@ void ez_detector_iter(double *sig, int sig_length, int fs)
   vector<double> thf_list;
   bool thf = false;
 
-  for(int i = 0; i < low_pass.size(); i++)
+  for(int i = 0; i < BUFF_SIZE; i++)
   {
     if(i < 5*fs)
     {
-      M = 0.6*max_vec(low_pass, 0, i+1);
-      printf("%f\n", max_vec(low_pass, 0, i+1));
+      M = 0.6*max_vec(integral, 0, i+1);
       MM.push_back(M);
       if(MM.size() > 5)
       {
@@ -209,7 +226,7 @@ void ez_detector_iter(double *sig, int sig_length, int fs)
 
       else if(QRS.size() > 0 && i < QRS[QRS.size()-1]+ms200)
       {
-        newM5 = 0.6*max_vec(low_pass, QRS[QRS.size()-1], i);
+        newM5 = 0.6*max_vec(integral, QRS[QRS.size()-1], i);
         if(newM5 > 1.5*MM[MM.size()-1])
         {
           newM5 = 1.1*MM[MM.size()-1];
@@ -242,14 +259,14 @@ void ez_detector_iter(double *sig, int sig_length, int fs)
       M_list.push_back(M);
       neg_m.push_back(-M);
 
-      if(QRS.size() == 0  && low_pass[i] > M)
+      if(QRS.size() == 0  && integral[i] > M)
       {
         QRS.push_back(i);
         thi_list.push_back(i);
         thi = true;
       }
 
-      else if(QRS.size()>0 && i > QRS[QRS.size()-1]+ms200 && low_pass[i]>M)
+      else if(QRS.size()>0 && i > QRS[QRS.size()-1]+ms200 && integral[i]>M)
       {
         QRS.push_back(i);
         thi_list.push_back(i);
@@ -258,16 +275,16 @@ void ez_detector_iter(double *sig, int sig_length, int fs)
 
       if(thi && i <thi_list[thi_list.size()-1]+ms160)
       {
-        if(low_pass[i]<-M && low_pass[i-1] > -M)
+        if(integral[i]<-M && integral[i-1] > -M)
         {
             thf = true;
         }
-        if(thf && low_pass[i] < -M)
+        if(thf && integral[i] < -M)
         {
           thf_list.push_back(i);
           counter++;
         }
-        else if(low_pass[i] > -M && thf)
+        else if(integral[i] > -M && thf)
         {
           counter = 0;
           thi = false;
